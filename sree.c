@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Define structure for BST node
 struct TreeNode {
     char data;
     char* code;
@@ -10,7 +9,6 @@ struct TreeNode {
     struct TreeNode* right;
 };
 
-// Function to create a new BST node
 struct TreeNode* newNode(char data) {
     struct TreeNode* node = (struct TreeNode*)malloc(sizeof(struct TreeNode));
     node->data = data;
@@ -19,7 +17,6 @@ struct TreeNode* newNode(char data) {
     return node;
 }
 
-// Function to insert a node into BST
 struct TreeNode* insert(struct TreeNode* root, char data, char* code) {
     if (root == NULL) {
         root = newNode(data);
@@ -32,7 +29,6 @@ struct TreeNode* insert(struct TreeNode* root, char data, char* code) {
     return root;
 }
 
-// Function to search for a node in BST
 struct TreeNode* search(struct TreeNode* root, char data) {
     if (root == NULL || root->data == data) {
         return root;
@@ -43,11 +39,10 @@ struct TreeNode* search(struct TreeNode* root, char data) {
     return search(root->right, data);
 }
 
-// Function to encode the input file using BST
 void encodeFile(char* inputFileName, char* outputFileName, struct TreeNode* root) {
     FILE *inputFile, *outputFile;
     inputFile = fopen(inputFileName, "r");
-    outputFile = fopen(outputFileName, "w");
+    outputFile = fopen(outputFileName, "wb");
 
     if (inputFile == NULL || outputFile == NULL) {
         printf("Error opening files.\n");
@@ -55,23 +50,43 @@ void encodeFile(char* inputFileName, char* outputFileName, struct TreeNode* root
     }
 
     char c;
+    unsigned char buffer = 0; // Buffer to store bits
+    int count = 0; // Count of bits written to buffer
+
     while ((c = fgetc(inputFile)) != EOF) {
         struct TreeNode* node = search(root, c);
         if (node == NULL) {
             printf("Error: Character '%c' not found in the tree.\n", c);
             exit(1);
         }
-        fprintf(outputFile, "%s", node->code);
+        char *code = node->code;
+        while (*code != '\0') {
+            // Shift buffer to left and add bit
+            buffer = (buffer << 1) | (*code - '0');
+            count++;
+            // If buffer is full, write it to output file
+            if (count == 8) {
+                fwrite(&buffer, sizeof(unsigned char), 1, outputFile);
+                buffer = 0;
+                count = 0;
+            }
+            code++;
+        }
+    }
+
+    // If there are remaining bits in buffer, write them to output file
+    if (count > 0) {
+        buffer <<= (8 - count);
+        fwrite(&buffer, sizeof(unsigned char), 1, outputFile);
     }
 
     fclose(inputFile);
     fclose(outputFile);
 }
 
-// Function to decode the encoded file using BST
 void decodeFile(char* inputFileName, char* outputFileName, struct TreeNode* root) {
     FILE *inputFile, *outputFile;
-    inputFile = fopen(inputFileName, "r");
+    inputFile = fopen(inputFileName, "rb");
     outputFile = fopen(outputFileName, "w");
 
     if (inputFile == NULL || outputFile == NULL) {
@@ -100,7 +115,6 @@ void decodeFile(char* inputFileName, char* outputFileName, struct TreeNode* root
     fclose(outputFile);
 }
 
-// Function to free memory allocated for BST
 void freeTree(struct TreeNode* root) {
     if (root != NULL) {
         freeTree(root->left);
@@ -111,10 +125,8 @@ void freeTree(struct TreeNode* root) {
 }
 
 int main() {
-    // Input file name
     char inputFileName[] = "input.txt";
 
-    // Build the BST with characters from the input file
     struct TreeNode* root = NULL;
     FILE *inputFile = fopen(inputFileName, "r");
     if (inputFile == NULL) {
@@ -130,14 +142,12 @@ int main() {
     }
     fclose(inputFile);
 
-    // Encode input file
     char encodedFileName[] = "encoded.txt";
     encodeFile(inputFileName, encodedFileName, root);
     printf("File has been encoded.\n");
 
-    // Print encoded content
     printf("Encoded content:\n");
-    FILE* encodedFile = fopen(encodedFileName, "r");
+    FILE* encodedFile = fopen(encodedFileName, "rb");
     if (encodedFile == NULL) {
         printf("Error opening encoded file.\n");
         exit(1);
@@ -148,12 +158,22 @@ int main() {
     printf("\n");
     fclose(encodedFile);
 
-    // Decode encoded file
     char decodedFileName[] = "decoded.txt";
     decodeFile(encodedFileName, decodedFileName, root);
     printf("File has been decoded.\n");
 
-    // Free allocated memory
+    FILE* decodedFile = fopen(decodedFileName, "r");
+    if (decodedFile == NULL) {
+        printf("Error opening decoded file.\n");
+        exit(1);
+    }
+    printf("Decoded content:\n");
+    while ((c = fgetc(decodedFile)) != EOF) {
+        printf("%c", c);
+    }
+    printf("\n");
+    fclose(decodedFile);
+
     freeTree(root);
 
     return 0;
