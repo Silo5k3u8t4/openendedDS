@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Easy Quiz Suboptions</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f9f9f9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  button {
+    padding: 15px 30px;
+    margin: 10px;
+    font-size: 18px;
+    background-color: #61abfb;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  button:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+  }
+</style>
+</head>
+<body>
+
+<h1>SELECT YOUR SUBJECT-</h1>
+<p>
+<button onclick="startQuiz('dbms')">DBMS</button>
+<button onclick="startQuiz('dcf')">DCF</button></p>
+<button onclick="startQuiz('co')">CO</button>
+<button onclick="startQuiz('C')">C</button></p>
+<!-- Add more sub-options as needed -->
+
+<script>
+function startQuiz(subcategory) {
+    // Redirect to the appropriate quiz page based on the selected subcategory
+    switch(subcategory) {
+      case 'dbms':
+        window.location.href = 'dbms.html';
+        break;
+      case 'dcf':
+        window.location.href = 'dcf.html';
+        break;
+        case 'co':
+        window.location.href = 'co.html';
+        break;
+        case 'c':
+        window.location.href = 'c.html';
+        break;
+
+      // Add more cases for additional sub-options
+      default:
+        alert('Invalid subcategory selected!');
+    }
+}
+</script>
+
+</body>
+</html>
