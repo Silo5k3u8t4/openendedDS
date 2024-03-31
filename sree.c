@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
+#define CODE_LENGTH 5 // Define the length of the encoding code
+
+// Define the TreeNode structure
 struct TreeNode {
     char data;
     char* code;
@@ -9,6 +13,7 @@ struct TreeNode {
     struct TreeNode* right;
 };
 
+// Function to generate a new TreeNode
 struct TreeNode* newNode(char data) {
     struct TreeNode* node = (struct TreeNode*)malloc(sizeof(struct TreeNode));
     node->data = data;
@@ -17,28 +22,57 @@ struct TreeNode* newNode(char data) {
     return node;
 }
 
+// Function to insert a TreeNode into the tree
 struct TreeNode* insert(struct TreeNode* root, char data, char* code) {
     if (root == NULL) {
         root = newNode(data);
         root->code = strdup(code);
-    } else if (data < root->data) {
+    } else if (strcmp(code, root->code) < 0) {
         root->left = insert(root->left, data, code);
-    } else if (data > root->data) {
+    } else if (strcmp(code, root->code) > 0) {
         root->right = insert(root->right, data, code);
+    } else {
+        // Handle case where code is already in use
+        free(code);
     }
     return root;
 }
 
-struct TreeNode* search(struct TreeNode* root, char data) {
-    if (root == NULL || root->data == data) {
-        return root;
+// Function to generate a random code
+char* generateRandomCode(int length) {
+    char* code = (char*)malloc((length + 1) * sizeof(char));
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    srand(time(NULL));
+
+    for (int i = 0; i < length; ++i) {
+        int index = rand() % (sizeof(charset) - 1);
+        code[i] = charset[index];
     }
-    if (data < root->data) {
-        return search(root->left, data);
-    }
-    return search(root->right, data);
+    code[length] = '\0';
+    return code;
 }
 
+// Function to search for a TreeNode with given code
+struct TreeNode* search(struct TreeNode* root, char code) {
+    if (root == NULL || root->data == code) {
+        return root;
+    }
+    if (code < root->data) {
+        return search(root->left, code);
+    }
+    return search(root->right, code);
+}
+
+// Function to print the contents of the tree
+void printTree(struct TreeNode* root) {
+    if (root != NULL) {
+        printf("Data: %c, Code: %s\n", root->data, root->code);
+        printTree(root->left);
+        printTree(root->right);
+    }
+}
+
+// Function to encode a file
 void encodeFile(char* inputFileName, char* outputFileName, struct TreeNode* root) {
     FILE *inputFile, *outputFile;
     inputFile = fopen(inputFileName, "r");
@@ -84,6 +118,7 @@ void encodeFile(char* inputFileName, char* outputFileName, struct TreeNode* root
     fclose(outputFile);
 }
 
+// Function to decode a file
 void decodeFile(char* inputFileName, char* outputFileName, struct TreeNode* root) {
     FILE *inputFile, *outputFile;
     inputFile = fopen(inputFileName, "rb");
@@ -95,19 +130,37 @@ void decodeFile(char* inputFileName, char* outputFileName, struct TreeNode* root
     }
 
     struct TreeNode* currentNode = root;
-    char bit;
-    while ((bit = fgetc(inputFile)) != EOF) {
-        if (bit == '0') {
-            currentNode = currentNode->left;
-        } else if (bit == '1') {
-            currentNode = currentNode->right;
-        } else {
-            printf("Invalid bit '%c' in encoded file.\n", bit);
-            exit(1);
-        }
-        if (currentNode->left == NULL && currentNode->right == NULL) {
-            fprintf(outputFile, "%c", currentNode->data);
-            currentNode = root;
+    unsigned char buffer; // Buffer to store bits
+    int count = 0; // Count of bits read from buffer
+
+    if (root == NULL) {
+        printf("Error: Tree is empty.\n");
+        exit(1);
+    }
+
+    while (fread(&buffer, sizeof(unsigned char), 1, inputFile) > 0) {
+        for (int i = 7; i >= 0; --i) {
+            char bit = (buffer >> i) & 1; // Extract each bit from buffer
+            if (bit == 0) {
+                if (currentNode->left == NULL) {
+                    printf("Error: Unexpected end of tree traversal. Exiting.\n");
+                    exit(1);
+                }
+                currentNode = currentNode->left;
+            } else if (bit == 1) {
+                if (currentNode->right == NULL) {
+                    printf("Error: Unexpected end of tree traversal. Exiting.\n");
+                    exit(1);
+                }
+                currentNode = currentNode->right;
+            } else {
+                printf("Invalid bit '%c' in encoded file.\n", bit);
+                exit(1);
+            }
+            if (currentNode->left == NULL && currentNode->right == NULL) {
+                fprintf(outputFile, "%c", currentNode->data);
+                currentNode = root;
+            }
         }
     }
 
@@ -115,6 +168,7 @@ void decodeFile(char* inputFileName, char* outputFileName, struct TreeNode* root
     fclose(outputFile);
 }
 
+// Function to free the memory allocated for the tree
 void freeTree(struct TreeNode* root) {
     if (root != NULL) {
         freeTree(root->left);
@@ -124,7 +178,9 @@ void freeTree(struct TreeNode* root) {
     }
 }
 
+// Main function
 int main() {
+    // Example usage
     char inputFileName[] = "input.txt";
 
     struct TreeNode* root = NULL;
@@ -136,43 +192,22 @@ int main() {
     char c;
     while ((c = fgetc(inputFile)) != EOF) {
         if (search(root, c) == NULL) {
-            char code[2] = {c, '\0'};
+            char* code = generateRandomCode(CODE_LENGTH);
             root = insert(root, c, code);
         }
     }
     fclose(inputFile);
 
-    char encodedFileName[] = "encoded.txt";
+    printf("Tree contents:\n");
+    printTree(root);
+
+    char encodedFileName[] = "encoded.txt"; // Encode into a text file
     encodeFile(inputFileName, encodedFileName, root);
     printf("File has been encoded.\n");
-
-    printf("Encoded content:\n");
-    FILE* encodedFile = fopen(encodedFileName, "rb");
-    if (encodedFile == NULL) {
-        printf("Error opening encoded file.\n");
-        exit(1);
-    }
-    while ((c = fgetc(encodedFile)) != EOF) {
-        printf("%c", c);
-    }
-    printf("\n");
-    fclose(encodedFile);
 
     char decodedFileName[] = "decoded.txt";
     decodeFile(encodedFileName, decodedFileName, root);
     printf("File has been decoded.\n");
-
-    FILE* decodedFile = fopen(decodedFileName, "r");
-    if (decodedFile == NULL) {
-        printf("Error opening decoded file.\n");
-        exit(1);
-    }
-    printf("Decoded content:\n");
-    while ((c = fgetc(decodedFile)) != EOF) {
-        printf("%c", c);
-    }
-    printf("\n");
-    fclose(decodedFile);
 
     freeTree(root);
 
